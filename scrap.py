@@ -6,7 +6,7 @@ import json
 # https://docs.microsoft.com/api/lists/studyguide/certification/certification.azure-security-engineer?locale=en-us
 # https://docs.microsoft.com/en-us/certifications/exams/az-500
 
-def generate_opf(href, spine):
+def generateOPF(href, spine):
     f = open('index.xhtml','w', encoding='utf-8')
     text1 = """<?xml version="1.0" encoding="utf-8" standalone="no"?>
     <package xmlns="http://www.idpf.org/2007/opf" xmlns:dc="http://purl.org/dc/elements/1.1/"
@@ -38,7 +38,7 @@ def generate_opf(href, spine):
 
 
 
-def get_text(source, submodule_tile,title):
+def getText(source, submodule_tile,title):
     f = open('./xhtml/' + title, 'w', encoding='utf-8')
     text1 = """<?xml version="1.0" encoding="UTF-8" standalone="no"?>
             <!DOCTYPE html>
@@ -60,7 +60,7 @@ def get_text(source, submodule_tile,title):
     f.close()
 
 
-def get_modules(_url, class_type, base):
+def getModules(_url, class_type, base):
     url_request = requests.get(_url)
     soup = bs4.BeautifulSoup(url_request.text, 'html.parser').find_all(class_=class_type)
     titles = []
@@ -77,27 +77,27 @@ def get_modules(_url, class_type, base):
     return content_url, titles
 
 
-def get_content(urls):
+def getContent(urls):
     href = ''
     spine = ''
     for url in urls:
-        modules_url, modules_title = get_modules(base_url + url, 'display-block text-decoration-none', base_url)
+        modules_url, modules_title = getModules(base_url + url, 'display-block text-decoration-none', base_url)
 
         for count0, module in enumerate(modules_url):
-            sub_modules, submodules_title = get_modules(module,'unit-title display-block font-size-md has-line-height-reset','')
+            sub_modules, submodules_title = getModules(module,'unit-title display-block font-size-md has-line-height-reset','')
 
             for count1, source in enumerate(sub_modules):
                 source_code = requests.get(source)
                 soup = bs4.BeautifulSoup(source_code.text, 'html.parser').find_all(
                     class_='section is-uniform position-relative')
                 title = modules_title[count0].replace(' ', '-') + '-' + submodules_title[count1].replace(' ', '-') + '.xhtml'
-                get_text(soup, submodules_title[count1] ,title)
+                getText(soup, submodules_title[count1] ,title)
                 href += """<item id="%s%s" href="%s" media-type="application/xhtml+xml"/>\n""" % (count0, count1, title)
                 spine += """<itemref idref="%s%s"/>\n""" % (count0, count1)
 
     print(href)
     print(spine)
-    generate_opf(href, spine)
+    generateOPF(href, spine)
 
 
 if __name__ == '__main__':
@@ -112,4 +112,4 @@ if __name__ == '__main__':
         urls.append(module['data']['url'])
         titles.append(module['data']['title'])
 
-    get_content(urls)
+    getContent(urls)
