@@ -37,6 +37,60 @@ def generateOPF(href, spine):
     f.write(text4)
     f.close()
 
+def generateIndex(modules_title):
+
+
+    f = open('./index.xhtml', 'w', encoding='utf-8')
+
+    text1 = """<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+    <!DOCTYPE html>
+    <html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops" xml:lang="es"lang="es">
+	<head>
+	<title>Accessible EPUB 3</title>
+	<link rel="stylesheet" type="text/css" href="css/epub.css" />
+	</head>
+	<body>
+	<h1>Accessible EPUB 3</h1>
+	<nav epub:type="toc" id="toc">
+	<h2>Table of Contents</h2>"""
+
+    text2 = """</nav>
+	        </body>
+            </html>"""
+
+
+    list_index = '<ol>\n'
+
+    for i in modules_title:
+        list_index += '<li>%s</li>\n' % i
+        list_index += '<ol>\n'
+        print(i)
+        for j in modules_title[i]:
+
+
+            for h in j:
+                list_index += '<li>%s</li>\n' % h
+                print('\t ' + h)
+
+                list_index += '<ol>\n'
+                for k in j[h]:
+
+
+                    list_index += '<li>%s</li>\n' % k
+                    print('\t\t' + str(k))
+
+
+            list_index += '</ol>\n'
+        list_index += '</ol>\n'
+    list_index += '</ol>\n'
+
+
+    f.write(text1)
+    f.write(list_index)
+    f.write(text2)
+    f.close()
+
+
 def replaceSymbols(s):
 
     a, b = 'áéíóúüñ', 'aeiouun'
@@ -69,6 +123,7 @@ def getText(source, submodule_tile,title):
 
 
 def getModules(_url, class_type, base):
+
     url_request = requests.get(_url)
     soup = bs4.BeautifulSoup(url_request.text, 'html.parser').find_all(class_=class_type)
     titles = []
@@ -85,25 +140,37 @@ def getModules(_url, class_type, base):
     return content_url, titles
 
 
-def getContent(urls):
+def getContent(urls, titles):
     href = ''
     spine = ''
+
+    titles_dict = {}
 
     for count, url in enumerate(urls):
 
         modules_url, modules_title = getModules(base_url + url, 'display-block text-decoration-none', base_url)
 
-        for count0, module in enumerate(modules_url):
+        titles_dict[titles[count]] = []
 
+
+        for count0, module in enumerate(modules_url):
+            aux_dict = {}
             sub_modules, submodules_title = getModules(module,'unit-title display-block font-size-md has-line-height-reset','')
             r = requests.get(module)
             r.encoding = 'utf-8'
 
             soup_module = bs4.BeautifulSoup(r.text, 'html.parser').find_all(class_='column is-auto padding-none padding-sm-tablet position-relative-tablet')
-            getText(soup_module, modules_title[count0], modules_title[count0].replace(' ','-')+'.xhtml')
+            #getText(soup_module, modules_title[count0], modules_title[count0].replace(' ','-')+'.xhtml')
 
             href += """<item id="%s%s" href="%s" media-type="application/xhtml+xml"/>\n""" %  (count, count0, replaceSymbols(modules_title[count0].replace(' ','-')+'.xhtml'))
             spine += """<itemref idref="%s%s"/>\n""" % (count, count0)
+
+            print(modules_title[count0])
+
+            aux_dict[modules_title[count0]] = submodules_title
+            titles_dict[titles[count]].append(aux_dict)
+            print(titles_dict)
+
 
             for count1, source in enumerate(sub_modules):
 
@@ -112,25 +179,27 @@ def getContent(urls):
 
                 soup = bs4.BeautifulSoup(source_code.text, 'html.parser').find_all(class_='section is-uniform position-relative')
                 title = replaceSymbols(modules_title[count0].replace(' ', '-') + '-' + submodules_title[count1].replace(' ', '-') + '.xhtml')
-                getText(soup, submodules_title[count1], title)
+                #getText(soup, submodules_title[count1], title)
 
                 href += """<item id="%s%s%s" href="%s" media-type="application/xhtml+xml"/>\n""" % (count,count0, count1, title)
                 spine += """<itemref idref="%s%s%s"/>\n""" % (count, count0, count1)
 
-    #generateIndex(modules_title, submodules_title)
+
+    generateIndex(titles_dict)
+
     generateOPF(href, spine)
 
 
 if __name__ == '__main__':
 
-    r = requests.get('https://docs.microsoft.com/api/lists/studyguide/certification/certification.azure-security-engineer?locale=en-us')
+    r = requests.get('https://docs.microsoft.com/api/lists/studyguide/certification/certification.azure-security-engineer?locale=es-mx')
     base_url = 'https://docs.microsoft.com/es-mx'
-    modules = json.loads(r.text)
-    titles = []
+    main_modules = json.loads(r.text)
+    main_titles = []
     urls = []
 
-    for module in modules['items']:
+    for module in main_modules['items']:
         urls.append(module['data']['url'])
-        titles.append(module['data']['title'])
+        main_titles.append(module['data']['title'])
 
-    getContent(urls)
+    getContent(urls, main_titles)
