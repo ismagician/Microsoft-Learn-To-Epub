@@ -1,14 +1,15 @@
 import bs4
 import requests
 import json
-
+import re
+import urllib.request
 
 # https://docs.microsoft.com/api/lists/studyguide/certification/certification.azure-security-engineer?locale=en-us
 # https://docs.microsoft.com/en-us/certifications/exams/az-500
 
 def generateOPF(href, spine):
 
-    f = open('package.opf','w', encoding='utf-8')
+    f = open('./xhtml/package.opf','w', encoding='utf-8')
     text1 = """<?xml version="1.0" encoding="utf-8" standalone="no"?>
     <package xmlns="http://www.idpf.org/2007/opf" xmlns:dc="http://purl.org/dc/elements/1.1/"
 	xmlns:dcterms="http://purl.org/dc/terms/" version="3.0" xml:lang="en"
@@ -40,11 +41,11 @@ def generateOPF(href, spine):
 def generateIndex(modules_title):
 
 
-    f = open('./index.xhtml', 'w', encoding='utf-8')
+    f = open('./xhtml/index.xhtml', 'w', encoding='utf-8')
 
     text1 = """<?xml version="1.0" encoding="UTF-8" standalone="no"?>
     <!DOCTYPE html>
-    <html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops" xml:lang="es"lang="es">
+    <html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops" xml:lang="en" lang="en">
 	<head>
 	<title>Accessible EPUB 3</title>
 	<link rel="stylesheet" type="text/css" href="css/epub.css" />
@@ -58,26 +59,27 @@ def generateIndex(modules_title):
 	        </body>
             </html>"""
 
+    # '<li>\n<a href="%s">%s</a></li>\n'
 
     list_index = '<ol>\n'
 
     for i in modules_title:
         list_index += '<li>%s</li>\n' % i
         list_index += '<ol>\n'
-        print(i)
+        # print(i)
         for j in modules_title[i]:
 
-
             for h in j:
-                list_index += '<li>%s</li>\n' % h
-                print('\t ' + h)
+
+                list_index += '<li>\n<a href="%s">%s</a></li>\n' % ( replaceSymbols(h.replace(' ','-')+'.xhtml'), h)
+                # list_index += '<li>%s</li>\n' % h
+                # print('\t ' + h)
 
                 list_index += '<ol>\n'
                 for k in j[h]:
-
-
-                    list_index += '<li>%s</li>\n' % k
-                    print('\t\t' + str(k))
+                    list_index += '<li>\n<a href="%s">%s</a></li>\n' % (replaceSymbols(h.replace(' ', '-') + '-' + k.replace(' ', '-') + '.xhtml'), k)
+                    # list_index += '<li>%s</li>\n' % k
+                    # print('\t\t' + str(k))
 
 
             list_index += '</ol>\n'
@@ -98,6 +100,13 @@ def replaceSymbols(s):
 
     return s.translate(trans)
 
+def downloadImage(base_url, img_url):
+
+    if img_url:
+        for img in img_url:
+
+            urllib.request.urlretrieve(base_url + img, './xhtml/images/'+img.split('/')[-1])
+
 def getText(source, submodule_tile,title):
 
     title = replaceSymbols(title)
@@ -115,12 +124,26 @@ def getText(source, submodule_tile,title):
         </html>
         """
     f.write(text1)
-    for s in source[0].contents:
-        f.write(str(s))
 
+    source_text =  ''
+
+    for s in source[0].contents:
+
+        source_text += str(s)
+
+    img_url = re.findall('src="(.*?)"', source_text)
+
+    if img_url:
+        for i  in img_url:
+            source_text = source_text.replace(i, 'images/'+ i.split('/')[-1])
+
+
+
+    f.write(source_text)
     f.write(text2)
     f.close()
 
+    return img_url
 
 def getModules(_url, class_type, base):
 
@@ -160,16 +183,17 @@ def getContent(urls, titles):
             r.encoding = 'utf-8'
 
             soup_module = bs4.BeautifulSoup(r.text, 'html.parser').find_all(class_='column is-auto padding-none padding-sm-tablet position-relative-tablet')
-            #getText(soup_module, modules_title[count0], modules_title[count0].replace(' ','-')+'.xhtml')
+
+            img_url = getText(soup_module, modules_title[count0], modules_title[count0].replace(' ','-')+'.xhtml')
+            downloadImage(module, img_url)
 
             href += """<item id="%s%s" href="%s" media-type="application/xhtml+xml"/>\n""" %  (count, count0, replaceSymbols(modules_title[count0].replace(' ','-')+'.xhtml'))
             spine += """<itemref idref="%s%s"/>\n""" % (count, count0)
 
-            print(modules_title[count0])
 
             aux_dict[modules_title[count0]] = submodules_title
             titles_dict[titles[count]].append(aux_dict)
-            print(titles_dict)
+
 
 
             for count1, source in enumerate(sub_modules):
@@ -179,7 +203,9 @@ def getContent(urls, titles):
 
                 soup = bs4.BeautifulSoup(source_code.text, 'html.parser').find_all(class_='section is-uniform position-relative')
                 title = replaceSymbols(modules_title[count0].replace(' ', '-') + '-' + submodules_title[count1].replace(' ', '-') + '.xhtml')
-                #getText(soup, submodules_title[count1], title)
+
+                img_url = getText(soup, submodules_title[count1], title)
+                downloadImage(module, img_url)
 
                 href += """<item id="%s%s%s" href="%s" media-type="application/xhtml+xml"/>\n""" % (count,count0, count1, title)
                 spine += """<itemref idref="%s%s%s"/>\n""" % (count, count0, count1)
@@ -187,13 +213,16 @@ def getContent(urls, titles):
 
     generateIndex(titles_dict)
 
-    generateOPF(href, spine)
+    href_index = """<item id="htmltoc" properties="nav" media-type="application/xhtml+xml" href="index.xhtml"/>\n"""
+    spine_index = """<itemref idref="htmltoc" linear="yes"/>\n"""
+
+    generateOPF(href_index + href, spine_index + spine)
 
 
 if __name__ == '__main__':
 
-    r = requests.get('https://docs.microsoft.com/api/lists/studyguide/certification/certification.azure-security-engineer?locale=es-mx')
-    base_url = 'https://docs.microsoft.com/es-mx'
+    r = requests.get('https://docs.microsoft.com/api/lists/studyguide/certification/certification.azure-security-engineer?locale=en-us')
+    base_url = 'https://docs.microsoft.com/en-us'
     main_modules = json.loads(r.text)
     main_titles = []
     urls = []
