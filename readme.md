@@ -20,7 +20,7 @@ To make the epub you need the link of the certification in this case AZ-500
   ```npx prettier --write ./epub_base/EPUB/```
 
 
-- And with `make-epub.py` create the EPUB file
+- And with [make-epub.py](https://gist.github.com/spajak/2e8d961da8942477eaa91baf0073478e)  create the EPUB file
 
   ```
   python make-epub.py epub_base file_name.epub
@@ -30,3 +30,4 @@ Note:
 To install Prettier with node
 
 - For local installation `npm install prettier`
+
