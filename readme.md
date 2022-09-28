@@ -26,8 +26,10 @@ To make the epub you need the link of the certification in this case AZ-500
   python make-epub.py epub_base file_name.epub
   ```
   
-Note: 
+### Note: 
+
 To install Prettier with node
 
 - For local installation `npm install prettier`
 
+- For epub creation Accessible EPUB 3 ( from [EPUB 3 Samples Table](https://idpf.github.io/epub3-samples/30/samples.html)) is used in epub_base directory
