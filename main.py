@@ -7,13 +7,9 @@ import os
 from glob import glob
 
 
-# https://docs.microsoft.com/api/lists/studyguide/certification/certification.azure-security-engineer?locale=en-us
-# https://docs.microsoft.com/en-us/certifications/exams/az-500
-
-
 def generateOPF(href, spine):
 
-    f = open('./epub_base/EPUB/package.opf', 'w', encoding='utf-8')
+    f = open(epub_dir + 'package.opf', 'w', encoding='utf-8')
     text1 = """<?xml version="1.0" encoding="utf-8" standalone="no"?>
     <package xmlns="http://www.idpf.org/2007/opf" xmlns:dc="http://purl.org/dc/elements/1.1/"
 	xmlns:dcterms="http://purl.org/dc/terms/" version="3.0" xml:lang="%s" 
@@ -46,7 +42,7 @@ def generateOPF(href, spine):
 
 def generateIndex(modules_title):
 
-    f = open('./epub_base/EPUB/index.xhtml', 'w', encoding='utf-8')
+    f = open(epub_dir + 'index.xhtml', 'w', encoding='utf-8')
 
     text1 = """<?xml version="1.0" encoding="UTF-8" standalone="no"?>
     <!DOCTYPE html>
@@ -109,7 +105,7 @@ def getTextModule(source, module, submodules, file_name):
 
     source_text = ''
     file_name = replaceSymbols(file_name)
-    f = open('./epub_base/EPUB/' + file_name , 'w', encoding='utf-8')
+    f = open(epub_dir + file_name , 'w', encoding='utf-8')
     text1 = """<?xml version="1.0" encoding="UTF-8" standalone="no"?>
             <!DOCTYPE html>
             <html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops" xml:lang="%s" lang="%s">
@@ -135,7 +131,7 @@ def getTextModule(source, module, submodules, file_name):
         for count, i in enumerate(href):
             source_text = source_text.replace(i, replaceSymbols(module.replace(' ', '-') + '-' + submodules[count].replace(' ', '-')) + '.xhtml')
 
-    source_text = source_text.replace('min', '')
+    source_text = source_text.replace('<span class="unit-duration font-size-xs margin-top-xxs has-text-subtle">min</span>', '')
 
     f.write(text1)
     f.write(source_text)
@@ -148,7 +144,7 @@ def getText(source, submodule_tile, file_name, boolean):
 
     source_text = ''
     file_name = replaceSymbols(file_name)
-    f = open('./epub_base/EPUB/' + file_name, 'w', encoding='utf-8')
+    f = open(epub_dir + file_name, 'w', encoding='utf-8')
 
     text1 = """<?xml version="1.0" encoding="UTF-8" standalone="no"?>
             <!DOCTYPE html>
@@ -226,7 +222,6 @@ def getContent(urls, titles):
         modules_url, modules_title = getModules(base_url + url, 'display-block text-decoration-none', base_url)
         titles_dict[titles[count]] = []
 
-
         for count0, module in enumerate(modules_url):
 
             aux_dict = {}
@@ -252,8 +247,6 @@ def getContent(urls, titles):
                 source_code = requests.get(source)
                 source_code.encoding = 'utf-8'
 
-
-
                 soup = bs4.BeautifulSoup(source_code.text, 'html.parser').find_all(class_='section is-uniform position-relative')
                 file_name = replaceSymbols(modules_title[count0].replace(' ', '-') + '-' + submodules_title[count1].replace(' ', '-') + '.xhtml')
                 print(source)
@@ -271,10 +264,8 @@ def getContent(urls, titles):
 
                 downloadImage(module, img_url)
 
-
-                href += """<item id="%s%s%s" href="%s" media-type="application/xhtml+xml"/>\n""" % (count,count0, count1, file_name)
+                href += """<item id="%s%s%s" href="%s" media-type="application/xhtml+xml"/>\n""" % (count, count0, count1, file_name)
                 spine += """<itemref idref="%s%s%s"/>\n""" % (count, count0, count1)
-
 
     generateIndex(titles_dict)
 
@@ -297,11 +288,16 @@ if __name__ == '__main__':
     main_titles = []
     urls = []
 
-    for file in glob('./epub_base/EPUB/*.*'):
+    images_dir = './epub_base/EPUB/images/'
+    epub_dir = './epub_base/EPUB/'
+    if not os.path.exists(images_dir):
+        os.mkdir(images_dir)
+
+    for file in glob(epub_dir + '*.*'):
         if os.path.isfile(file):
             os.remove(file)
 
-    for file in glob('./epub_base/EPUB/images/*.*'):
+    for file in glob(images_dir + '*.*'):
         if os.path.isfile(file):
             os.remove(file)
 
@@ -310,6 +306,3 @@ if __name__ == '__main__':
         main_titles.append(module['data']['title'])
 
     getContent(urls, main_titles)
-
-
-
