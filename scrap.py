@@ -3,6 +3,9 @@ import requests
 import json
 import re
 import urllib.request
+import os
+from glob import glob
+
 
 # https://docs.microsoft.com/api/lists/studyguide/certification/certification.azure-security-engineer?locale=en-us
 # https://docs.microsoft.com/en-us/certifications/exams/az-500
@@ -10,15 +13,16 @@ import urllib.request
 
 def generateOPF(href, spine):
 
-    f = open('./xhtml/package.opf','w', encoding='utf-8')
+    f = open('./epub_base/EPUB/package.opf', 'w', encoding='utf-8')
     text1 = """<?xml version="1.0" encoding="utf-8" standalone="no"?>
     <package xmlns="http://www.idpf.org/2007/opf" xmlns:dc="http://purl.org/dc/elements/1.1/"
-	xmlns:dcterms="http://purl.org/dc/terms/" version="3.0" xml:lang="en"
+	xmlns:dcterms="http://purl.org/dc/terms/" version="3.0" xml:lang="%s" 
 	unique-identifier="pub-identifier">
 	<metadata>
 	</metadata>
 	<manifest>  
-	"""
+	""" % lang
+
     text2 = """		<item id="epub.embedded.font.1" href="fonts/UbuntuMono-B.ttf" media-type="application/vnd.ms-opentype"/>
 		<item id="epub.embedded.font.2" href="fonts/UbuntuMono-BI.ttf" media-type="application/vnd.ms-opentype"/>
 		<item id="epub.embedded.font.3" href="fonts/UbuntuMono-R.ttf" media-type="application/vnd.ms-opentype"/>
@@ -42,19 +46,19 @@ def generateOPF(href, spine):
 
 def generateIndex(modules_title):
 
-    f = open('./xhtml/index.xhtml', 'w', encoding='utf-8')
+    f = open('./epub_base/EPUB/index.xhtml', 'w', encoding='utf-8')
 
     text1 = """<?xml version="1.0" encoding="UTF-8" standalone="no"?>
     <!DOCTYPE html>
-    <html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops" xml:lang="en" lang="en">
+    <html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops" xml:lang="%s" lang="%s">
 	<head>
-	<title>Accessible EPUB 3</title>
+	<title>Guide</title>
 	<link rel="stylesheet" type="text/css" href="css/epub.css" />
 	</head>
 	<body>
-	<h1>Accessible EPUB 3</h1>
+	<h1>Guide</h1>
 	<nav epub:type="toc" id="toc">
-	<h2>Table of Contents</h2>"""
+	<h2>Table of Contents</h2>""" % (lang, lang)
 
     text2 = """</nav>
 	        </body>
@@ -88,31 +92,34 @@ def generateIndex(modules_title):
 
 def replaceSymbols(s):
 
+    s = s.replace(':', '')
     a, b = 'áéíóúüñ', 'aeiouun'
     trans = str.maketrans(a, b)
 
     return s.translate(trans)
 
-def downloadImage(base_url, img_url):
+def downloadImage(module_url, img_url):
 
     if img_url:
         for img in img_url:
 
-            urllib.request.urlretrieve(base_url + img, './xhtml/images/'+img.split('/')[-1])
+            urllib.request.urlretrieve(module_url + img, './epub_base/EPUB/images/'+img.split('/')[-1])
 
-def getTextModule(source, module, submodules, title):
+def getTextModule(source, module, submodules, file_name):
 
+    if file_name == 'Proteccion-de-soluciones-de-Azure-con-Azure-Active-Directory-Exploracion':
+        pass
     source_text = ''
-    title = replaceSymbols(title)
-    f = open('./xhtml/' + title , 'w', encoding='utf-8')
+    title = replaceSymbols(file_name)
+    f = open('./epub_base/EPUB/' + file_name , 'w', encoding='utf-8')
     text1 = """<?xml version="1.0" encoding="UTF-8" standalone="no"?>
             <!DOCTYPE html>
-            <html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops" xml:lang="en"lang="en">
+            <html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops" xml:lang="%s" lang="%s">
     	        <head>
     		        <title>%s</title>
     		        <link rel="stylesheet" type="text/css" href="css/epub.css" />
     	        </head>
-                <body>\n""" % module
+                <body>\n""" % (lang, lang, module)
 
     text2 = """</body>
         </html>
@@ -139,19 +146,20 @@ def getTextModule(source, module, submodules, title):
 
 
 
-def getText(source, submodule_tile, title, base_url, boolean):
+def getText(source, submodule_tile, file_name, boolean):
 
     source_text = ''
-    title = replaceSymbols(title)
-    f = open('./xhtml/' + replaceSymbols(title), 'w', encoding='utf-8')
+    file_name = replaceSymbols(file_name)
+    f = open('./epub_base/EPUB/' + file_name, 'w', encoding='utf-8')
+
     text1 = """<?xml version="1.0" encoding="UTF-8" standalone="no"?>
             <!DOCTYPE html>
-            <html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops" xml:lang="en"lang="en">
+            <html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops" xml:lang="%s" lang="%s">
     	        <head>
     		        <title>%s</title>
     		        <link rel="stylesheet" type="text/css" href="css/epub.css" />
     	        </head>
-                <body>\n""" % submodule_tile
+                <body>\n""" % (lang, lang, submodule_tile)
 
     text2 = """</body>
         </html>
@@ -209,7 +217,7 @@ def getModules(_url, class_type, base):
     return content_url, titles
 
 
-def getContent(base_url, urls, titles):
+def getContent(urls, titles):
 
     href = ''
     spine = ''
@@ -246,25 +254,27 @@ def getContent(base_url, urls, titles):
                 source_code = requests.get(source)
                 source_code.encoding = 'utf-8'
 
+
+
                 soup = bs4.BeautifulSoup(source_code.text, 'html.parser').find_all(class_='section is-uniform position-relative')
-                title = replaceSymbols(modules_title[count0].replace(' ', '-') + '-' + submodules_title[count1].replace(' ', '-') + '.xhtml')
+                file_name = replaceSymbols(modules_title[count0].replace(' ', '-') + '-' + submodules_title[count1].replace(' ', '-') + '.xhtml')
                 print(source)
 
                 if count1 == 0:
 
-                    img_url = getText(soup, submodules_title[count1], title, base_url, True)
+                    img_url = getText(soup, submodules_title[count1], file_name, True)
 
                 elif count1 == sub_modules.__len__()-1:
 
-                    img_url = getText(soup, submodules_title[count1], title, base_url, True)
+                    img_url = getText(soup, submodules_title[count1], file_name, True)
 
                 else:
-                    img_url = getText(soup, submodules_title[count1], title, base_url, False)
+                    img_url = getText(soup, submodules_title[count1], file_name, False)
 
                 downloadImage(module, img_url)
 
 
-                href += """<item id="%s%s%s" href="%s" media-type="application/xhtml+xml"/>\n""" % (count,count0, count1, title)
+                href += """<item id="%s%s%s" href="%s" media-type="application/xhtml+xml"/>\n""" % (count,count0, count1, file_name)
                 spine += """<itemref idref="%s%s%s"/>\n""" % (count, count0, count1)
 
 
@@ -278,6 +288,7 @@ def getContent(base_url, urls, titles):
 
 if __name__ == '__main__':
 
+    lang = 'es'
     language = 'es-mx'
     r = requests.get(
         'https://docs.microsoft.com/api/lists/studyguide/certification/certification.azure-security-engineer?locale=%s' % language)
@@ -287,8 +298,15 @@ if __name__ == '__main__':
     main_titles = []
     urls = []
 
+    for file in glob('./epub_base/EPUB/*.*'):
+        if os.path.isfile(file):
+            os.remove(file)
+
+
     for module in main_modules['items']:
         urls.append(module['data']['url'])
         main_titles.append(module['data']['title'])
 
-    getContent(base_url, urls, main_titles)
+    getContent(urls, main_titles)
+
+
