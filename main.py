@@ -288,10 +288,11 @@ if __name__ == '__main__':
 
     lang = 'es'
     language = 'es-mx'
-    r = requests.get(
-        'https://docs.microsoft.com/api/lists/studyguide/certification/certification.azure-security-engineer?locale=%s' % language)
+    path_url = 'https://docs.microsoft.com/api/lists/studyguide/certification/certification.azure-security-engineer?locale=%s' % language
     base_url = 'https://docs.microsoft.com/%s' % language
     text_to_delete = ['<span class="visually-hidden">Completado</span>', '<span>Continuar </span>']
+
+    r = requests.get(path_url)
     main_modules = json.loads(r.text)
     main_titles = []
     urls = []
@@ -300,11 +301,15 @@ if __name__ == '__main__':
         if os.path.isfile(file):
             os.remove(file)
 
+    for file in glob('./epub_base/EPUB/images/*.*'):
+        if os.path.isfile(file):
+            os.remove(file)
 
     for module in main_modules['items']:
         urls.append(module['data']['url'])
         main_titles.append(module['data']['title'])
 
     getContent(urls, main_titles)
+
 
 
