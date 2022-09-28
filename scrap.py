@@ -7,6 +7,7 @@ import urllib.request
 # https://docs.microsoft.com/api/lists/studyguide/certification/certification.azure-security-engineer?locale=en-us
 # https://docs.microsoft.com/en-us/certifications/exams/az-500
 
+
 def generateOPF(href, spine):
 
     f = open('./xhtml/package.opf','w', encoding='utf-8')
@@ -38,8 +39,8 @@ def generateOPF(href, spine):
     f.write(text4)
     f.close()
 
-def generateIndex(modules_title):
 
+def generateIndex(modules_title):
 
     f = open('./xhtml/index.xhtml', 'w', encoding='utf-8')
 
@@ -59,33 +60,25 @@ def generateIndex(modules_title):
 	        </body>
             </html>"""
 
-    # '<li>\n<a href="%s">%s</a></li>\n'
-
     list_index = '<ol>\n'
 
     for i in modules_title:
         list_index += '<li>%s</li>\n' % i
         list_index += '<ol>\n'
-        # print(i)
+
         for j in modules_title[i]:
 
             for h in j:
 
-                list_index += '<li>\n<a href="%s">%s</a></li>\n' % ( replaceSymbols(h.replace(' ','-')+'.xhtml'), h)
-                # list_index += '<li>%s</li>\n' % h
-                # print('\t ' + h)
-
+                list_index += '<li>\n<a href="%s">%s</a></li>\n' % (replaceSymbols(h.replace(' ', '-')+'.xhtml'), h)
                 list_index += '<ol>\n'
+
                 for k in j[h]:
                     list_index += '<li>\n<a href="%s">%s</a></li>\n' % (replaceSymbols(h.replace(' ', '-') + '-' + k.replace(' ', '-') + '.xhtml'), k)
-                    # list_index += '<li>%s</li>\n' % k
-                    # print('\t\t' + str(k))
-
 
             list_index += '</ol>\n'
         list_index += '</ol>\n'
     list_index += '</ol>\n'
-
 
     f.write(text1)
     f.write(list_index)
@@ -107,8 +100,48 @@ def downloadImage(base_url, img_url):
 
             urllib.request.urlretrieve(base_url + img, './xhtml/images/'+img.split('/')[-1])
 
-def getText(source, submodule_tile,title):
+def getTextModule(source, module, submodules, title):
 
+    source_text = ''
+    title = replaceSymbols(title)
+    f = open('./xhtml/' + title , 'w', encoding='utf-8')
+    text1 = """<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+            <!DOCTYPE html>
+            <html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops" xml:lang="en"lang="en">
+    	        <head>
+    		        <title>%s</title>
+    		        <link rel="stylesheet" type="text/css" href="css/epub.css" />
+    	        </head>
+                <body>\n""" % module
+
+    text2 = """</body>
+        </html>
+        """
+
+
+    for s in source[0].contents:
+
+        source_text += str(s)
+
+
+    href = re.findall('href="(.*?)"', source_text)
+
+    if href:
+        for count, i in enumerate(href):
+            source_text = source_text.replace(i, replaceSymbols(module.replace(' ', '-') + '-' + submodules[count].replace(' ', '-')) + '.xhtml')
+
+    source_text = source_text.replace('min', '')
+
+    f.write(text1)
+    f.write(source_text)
+    f.write(text2)
+    f.close()
+
+
+
+def getText(source, submodule_tile, title, base_url, boolean):
+
+    source_text = ''
     title = replaceSymbols(title)
     f = open('./xhtml/' + replaceSymbols(title), 'w', encoding='utf-8')
     text1 = """<?xml version="1.0" encoding="UTF-8" standalone="no"?>
@@ -123,9 +156,7 @@ def getText(source, submodule_tile,title):
     text2 = """</body>
         </html>
         """
-    f.write(text1)
 
-    source_text =  ''
 
     for s in source[0].contents:
 
@@ -134,11 +165,26 @@ def getText(source, submodule_tile,title):
     img_url = re.findall('src="(.*?)"', source_text)
 
     if img_url:
-        for i  in img_url:
+        for i in img_url:
             source_text = source_text.replace(i, 'images/'+ i.split('/')[-1])
 
 
+    if boolean:
 
+        href_no_url = re.findall('href="/(.*?)/"', source_text)
+        source_text = source_text.replace('href="/%s/"' % href_no_url[-1], '')
+
+        href = re.findall('href="(.*?)"', source_text)
+
+        for i in href:
+            base_aux = base_url.replace(language, '').replace('.com/', '.com')
+            source_text = source_text.replace('href="%s"' % i, 'href="%s"' % (base_aux + i))
+
+
+    for text in text_to_delete:
+        source_text = source_text.replace(text,'')
+
+    f.write(text1)
     f.write(source_text)
     f.write(text2)
     f.close()
@@ -163,20 +209,20 @@ def getModules(_url, class_type, base):
     return content_url, titles
 
 
-def getContent(urls, titles):
+def getContent(base_url, urls, titles):
+
     href = ''
     spine = ''
-
     titles_dict = {}
 
     for count, url in enumerate(urls):
 
         modules_url, modules_title = getModules(base_url + url, 'display-block text-decoration-none', base_url)
-
         titles_dict[titles[count]] = []
 
 
         for count0, module in enumerate(modules_url):
+
             aux_dict = {}
             sub_modules, submodules_title = getModules(module,'unit-title display-block font-size-md has-line-height-reset','')
             r = requests.get(module)
@@ -184,8 +230,8 @@ def getContent(urls, titles):
 
             soup_module = bs4.BeautifulSoup(r.text, 'html.parser').find_all(class_='column is-auto padding-none padding-sm-tablet position-relative-tablet')
 
-            img_url = getText(soup_module, modules_title[count0], modules_title[count0].replace(' ','-')+'.xhtml')
-            downloadImage(module, img_url)
+            getTextModule(soup_module, modules_title[count0], submodules_title, modules_title[count0].replace(' ','-')+'.xhtml')
+
 
             href += """<item id="%s%s" href="%s" media-type="application/xhtml+xml"/>\n""" %  (count, count0, replaceSymbols(modules_title[count0].replace(' ','-')+'.xhtml'))
             spine += """<itemref idref="%s%s"/>\n""" % (count, count0)
@@ -195,7 +241,6 @@ def getContent(urls, titles):
             titles_dict[titles[count]].append(aux_dict)
 
 
-
             for count1, source in enumerate(sub_modules):
 
                 source_code = requests.get(source)
@@ -203,9 +248,21 @@ def getContent(urls, titles):
 
                 soup = bs4.BeautifulSoup(source_code.text, 'html.parser').find_all(class_='section is-uniform position-relative')
                 title = replaceSymbols(modules_title[count0].replace(' ', '-') + '-' + submodules_title[count1].replace(' ', '-') + '.xhtml')
+                print(source)
 
-                img_url = getText(soup, submodules_title[count1], title)
+                if count1 == 0:
+
+                    img_url = getText(soup, submodules_title[count1], title, base_url, True)
+
+                elif count1 == sub_modules.__len__()-1:
+
+                    img_url = getText(soup, submodules_title[count1], title, base_url, True)
+
+                else:
+                    img_url = getText(soup, submodules_title[count1], title, base_url, False)
+
                 downloadImage(module, img_url)
+
 
                 href += """<item id="%s%s%s" href="%s" media-type="application/xhtml+xml"/>\n""" % (count,count0, count1, title)
                 spine += """<itemref idref="%s%s%s"/>\n""" % (count, count0, count1)
@@ -221,8 +278,11 @@ def getContent(urls, titles):
 
 if __name__ == '__main__':
 
-    r = requests.get('https://docs.microsoft.com/api/lists/studyguide/certification/certification.azure-security-engineer?locale=en-us')
-    base_url = 'https://docs.microsoft.com/en-us'
+    language = 'es-mx'
+    r = requests.get(
+        'https://docs.microsoft.com/api/lists/studyguide/certification/certification.azure-security-engineer?locale=%s' % language)
+    base_url = 'https://docs.microsoft.com/%s' % language
+    text_to_delete = ['<span class="visually-hidden">Completado</span>', '<span>Continuar </span>']
     main_modules = json.loads(r.text)
     main_titles = []
     urls = []
@@ -231,4 +291,4 @@ if __name__ == '__main__':
         urls.append(module['data']['url'])
         main_titles.append(module['data']['title'])
 
-    getContent(urls, main_titles)
+    getContent(base_url, urls, main_titles)
