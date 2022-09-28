@@ -107,10 +107,8 @@ def downloadImage(module_url, img_url):
 
 def getTextModule(source, module, submodules, file_name):
 
-    if file_name == 'Proteccion-de-soluciones-de-Azure-con-Azure-Active-Directory-Exploracion':
-        pass
     source_text = ''
-    title = replaceSymbols(file_name)
+    file_name = replaceSymbols(file_name)
     f = open('./epub_base/EPUB/' + file_name , 'w', encoding='utf-8')
     text1 = """<?xml version="1.0" encoding="UTF-8" standalone="no"?>
             <!DOCTYPE html>
