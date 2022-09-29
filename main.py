@@ -192,6 +192,14 @@ def getText(source, submodule_tile, file_name, boolean):
                 base_aux = base_url.replace(language, '').replace('.com/', '.com')
                 source_text = source_text.replace('href="%s"' % i, 'href="%s"' % (base_aux + i))
 
+    else:
+
+        href = re.findall('href="(.*?)"', source_text)
+
+        for i in href:
+            if not 'https' in i:
+                base_aux = base_url.replace(language, '').replace('.com/', '.com')
+                source_text = source_text.replace('href="%s"' % i, 'href="%s"' % (base_aux + i))
 
     for text in text_to_delete:
         source_text = source_text.replace(text,'')
@@ -296,7 +304,7 @@ if __name__ == '__main__':
 
     lang = 'es'
     language = 'es-mx'
-    path_url = 'https://learn.microsoft.com/api/lists/studyguide/exam/exam.az-500?locale=%s' % language
+    path_url = 'https://learn.microsoft.com/api/lists/studyguide/exam/exam.sc-900?locale=%s' % language
     base_url = 'https://docs.microsoft.com/%s' % language
     text_to_delete = ['<span class="visually-hidden">Completado</span>', '<span>Continuar </span>']
 
