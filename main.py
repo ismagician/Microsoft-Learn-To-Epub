@@ -73,8 +73,8 @@ def generateIndex(modules_title):
                 list_index += '<li>\n<a href="%s">%s</a></li>\n' % (replaceSymbols(h.replace(' ', '-')+'.xhtml'), h)
                 list_index += '<ol>\n'
 
-                for k in j[h]:
-                    list_index += '<li>\n<a href="%s">%s</a></li>\n' % (replaceSymbols(h.replace(' ', '-') + '-' + k.replace(' ', '-') + '.xhtml'), k)
+                for index, k in enumerate(j[h][0]) :
+                    list_index += '<li>\n<a href="%s">%s</a></li>\n' % (replaceSymbols(h.replace(' ', '-') + '-' + j[h][1][index].replace(' ', '-') + '.xhtml'), k)
 
             list_index += '</ol>\n'
         list_index += '</ol>\n'
@@ -99,7 +99,9 @@ def downloadImage(module_url, img_url):
     if img_url:
         for img in img_url:
 
-            urllib.request.urlretrieve(module_url + img, './epub_base/EPUB/images/'+img.split('/')[-1])
+            if not 'https' in img:
+                urllib.request.urlretrieve(module_url + img, './epub_base/EPUB/images/'+ img.split('/')[-1])
+
 
 def getTextModule(source, module, submodules, file_name):
 
@@ -132,7 +134,8 @@ def getTextModule(source, module, submodules, file_name):
             source_text = source_text.replace(i, replaceSymbols(module.replace(' ', '-') + '-' + submodules[count].replace(' ', '-')) + '.xhtml')
 
     source_text = source_text.replace('<span class="unit-duration font-size-xs margin-top-xxs has-text-subtle">min</span>', '')
-
+    source_text = source_text.replace(' ',' ')
+    
     f.write(text1)
     f.write(source_text)
     f.write(text2)
@@ -168,7 +171,13 @@ def getText(source, submodule_tile, file_name, boolean):
 
     if img_url:
         for i in img_url:
-            source_text = source_text.replace(i, 'images/'+ i.split('/')[-1])
+            if not 'https' in i:
+                source_text = source_text.replace(i, 'images/'+ i.split('/')[-1])
+            else:
+                iframe = re.findall('<iframe (.*?)</iframe>', source_text)
+
+                for j in iframe:
+                    source_text = source_text.replace('<iframe %s</iframe>' % j, '<a href="%s">Link</a>' % i)
 
 
     if boolean:
@@ -179,13 +188,16 @@ def getText(source, submodule_tile, file_name, boolean):
         href = re.findall('href="(.*?)"', source_text)
 
         for i in href:
-            base_aux = base_url.replace(language, '').replace('.com/', '.com')
-            source_text = source_text.replace('href="%s"' % i, 'href="%s"' % (base_aux + i))
+            if not 'https' in i:
+                base_aux = base_url.replace(language, '').replace('.com/', '.com')
+                source_text = source_text.replace('href="%s"' % i, 'href="%s"' % (base_aux + i))
 
 
     for text in text_to_delete:
         source_text = source_text.replace(text,'')
 
+    source_text = source_text.replace(' ',' ')
+    
     f.write(text1)
     f.write(source_text)
     f.write(text2)
@@ -226,19 +238,24 @@ def getContent(urls, titles):
 
             aux_dict = {}
             sub_modules, submodules_title = getModules(module,'unit-title display-block font-size-md has-line-height-reset','')
+            submodules_title_short_name = [''] * submodules_title.__len__()
+
+            for index, sub in enumerate(sub_modules):
+                submodules_title_short_name[index] = sub_modules[index].split( '/')[-1]
+
             r = requests.get(module)
             r.encoding = 'utf-8'
 
             soup_module = bs4.BeautifulSoup(r.text, 'html.parser').find_all(class_='column is-auto padding-none padding-sm-tablet position-relative-tablet')
 
-            getTextModule(soup_module, modules_title[count0], submodules_title, modules_title[count0].replace(' ','-')+'.xhtml')
+            getTextModule(soup_module, modules_title[count0], submodules_title_short_name, modules_title[count0].replace(' ','-')+'.xhtml')
 
 
             href += """<item id="%s%s" href="%s" media-type="application/xhtml+xml"/>\n""" %  (count, count0, replaceSymbols(modules_title[count0].replace(' ','-')+'.xhtml'))
             spine += """<itemref idref="%s%s"/>\n""" % (count, count0)
 
 
-            aux_dict[modules_title[count0]] = submodules_title
+            aux_dict[modules_title[count0]] = [submodules_title, submodules_title_short_name]
             titles_dict[titles[count]].append(aux_dict)
 
 
@@ -248,7 +265,7 @@ def getContent(urls, titles):
                 source_code.encoding = 'utf-8'
 
                 soup = bs4.BeautifulSoup(source_code.text, 'html.parser').find_all(class_='section is-uniform position-relative')
-                file_name = replaceSymbols(modules_title[count0].replace(' ', '-') + '-' + submodules_title[count1].replace(' ', '-') + '.xhtml')
+                file_name = replaceSymbols(modules_title[count0].replace(' ', '-') + '-' + submodules_title_short_name[count1].replace(' ', '-') + '.xhtml')
                 print(source)
 
                 if count1 == 0:
@@ -279,7 +296,7 @@ if __name__ == '__main__':
 
     lang = 'es'
     language = 'es-mx'
-    path_url = 'https://docs.microsoft.com/api/lists/studyguide/certification/certification.azure-security-engineer?locale=%s' % language
+    path_url = 'https://learn.microsoft.com/api/lists/studyguide/exam/exam.az-500?locale=%s' % language
     base_url = 'https://docs.microsoft.com/%s' % language
     text_to_delete = ['<span class="visually-hidden">Completado</span>', '<span>Continuar </span>']
 
