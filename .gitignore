@@ -1,5 +1,8 @@
 **/node_modules/
 **/.idea
+*.xhtml
+*.opf
+*.png
 package.json
 package-lock.json
 make-epub.py
