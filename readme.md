@@ -9,7 +9,7 @@ To make the epub you need the link of the certification in this case AZ-500
   ```python 
     lang = 'es'
     language = 'es-mx'
-    path_url = 'https://docs.microsoft.com/api/lists/studyguide/certification/certification.azure-security-engineer?locale=%s' % language
+    path_url = 'https://learn.microsoft.com/api/lists/studyguide/exam/exam.az-500?locale=%s' % language
     base_url = 'https://docs.microsoft.com/%s' % language
   ```
 - Run `main.py` 
