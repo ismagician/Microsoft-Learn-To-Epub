@@ -103,7 +103,37 @@ def downloadImage(module_url, img_url):
                 urllib.request.urlretrieve(module_url + img, './epub_base/EPUB/images/'+ img.split('/')[-1])
 
 
+def deleteTags(source_text):
+
+    delete1 = '<span class="visually-hidden">{}</span>'
+    search = re.findall('<span class="visually-hidden">(.*?)</span>', source_text)
+
+    delete2 = '<p>\n<a class="button button-primary button-clear" data-linktype="absolute-path" {}>\n<span>{}</span>\n<span class="docon docon-chevron-right-light"></span>\n</a>\n</p>'
+    search2 = re.findall('href="/[a-zA-Z]+-[a-zA-Z]+/"', source_text)
+
+    delete3 = '<button class="button button-primary button-filled is-radiusless margin-top-xs" data-bi-name="check-answers" type="submit">{}</button>'
+    search3 = re.findall('type="submit">(.*?)</button>', source_text)
+
+    delete4 = '<p class="font-size-sm has-text-danger font-weight-semibold margin-top-xxs is-hidden" id="unanswered-question-error" role="alert">{}</p>'
+    search4 = re.findall('role="alert">(.*?)</p>', source_text)
+
+    if search:
+        source_text = source_text.replace(delete1.format(search[0]), '')
+
+    if search2:
+        search_aux = re.findall('%s>\n<span>(.*?)</span>' % search2[0], source_text)
+        if search_aux:
+            source_text = source_text.replace(delete2.format(search2[0], search_aux[0]), '')
+
+    if search3:
+        source_text = source_text.replace(delete3.format(search3[0]), '')
+
+    if search4:
+        source_text = source_text.replace(delete4.format(search4[0]), '')
+
+    return source_text
 def getTextModule(source, module, submodules, file_name):
+
 
     source_text = ''
     file_name = replaceSymbols(file_name)
@@ -133,7 +163,12 @@ def getTextModule(source, module, submodules, file_name):
         for count, i in enumerate(href):
             source_text = source_text.replace(i, replaceSymbols(module.replace(' ', '-') + '-' + submodules[count].replace(' ', '-')) + '.xhtml')
 
-    source_text = source_text.replace('<span class="unit-duration font-size-xs margin-top-xxs has-text-subtle">min</span>', '')
+    search = re.findall('<span class="unit-duration font-size-xs margin-top-xxs has-text-subtle">(.*?)</span>',source_text)
+    source_text = source_text.replace('<span class="unit-duration font-size-xs margin-top-xxs has-text-subtle">%s</span>' % search[0], '')
+
+    search = re.findall('<span class="add-to-collection-status">\s+[a-zA-Z]+\s+</span>', source_text)
+    source_text = source_text.replace(search[0], '')
+
     source_text = source_text.replace(' ',' ')
     
     f.write(text1)
@@ -167,10 +202,14 @@ def getText(source, submodule_tile, file_name, boolean):
 
         source_text += str(s)
 
+    source_text = deleteTags(source_text)
+
     img_url = re.findall('src="(.*?)"', source_text)
 
     if img_url:
+
         for i in img_url:
+
             if not 'https' in i:
                 source_text = source_text.replace(i, 'images/'+ i.split('/')[-1])
             else:
@@ -182,27 +221,35 @@ def getText(source, submodule_tile, file_name, boolean):
 
     if boolean:
 
-        href_no_url = re.findall('href="/(.*?)/"', source_text)
-        source_text = source_text.replace('href="/%s/"' % href_no_url[-1], '')
-
         href = re.findall('href="(.*?)"', source_text)
 
         for i in href:
+
+
             if not 'https' in i:
                 base_aux = base_url.replace(language, '').replace('.com/', '.com')
                 source_text = source_text.replace('href="%s"' % i, 'href="%s"' % (base_aux + i))
 
     else:
 
+
         href = re.findall('href="(.*?)"', source_text)
 
         for i in href:
-            if not 'https' in i:
-                base_aux = base_url.replace(language, '').replace('.com/', '.com')
-                source_text = source_text.replace('href="%s"' % i, 'href="%s"' % (base_aux + i))
 
-    for text in text_to_delete:
-        source_text = source_text.replace(text,'')
+            if not 'https' in i:
+
+                base_aux = base_url.replace(language, '').replace('.com/', '.com')
+
+                if 'lightbox' in i:
+
+                    i_aux = i.replace('../../', '/training/')
+                    source_text = source_text.replace('href="%s"' % i, 'href="%s"' % (base_aux + i_aux))
+
+                else:
+
+                    source_text = source_text.replace('href="%s"' % i, 'href="%s"' % (base_aux + i))
+
 
     source_text = source_text.replace(' ',' ')
     
@@ -216,7 +263,7 @@ def getText(source, submodule_tile, file_name, boolean):
 def getModules(_url, class_type, base):
 
     url_request = requests.get(_url)
-    soup = bs4.BeautifulSoup(url_request.text, 'html.parser').find_all(class_=class_type)
+    soup = bs4.BeautifulSoup(url_request.text, 'html.parser').find_all(class_= class_type)
     titles = []
     content_url = []
 
@@ -304,9 +351,8 @@ if __name__ == '__main__':
 
     lang = 'es'
     language = 'es-mx'
-    path_url = 'https://learn.microsoft.com/api/lists/studyguide/exam/exam.sc-900?locale=%s' % language
-    base_url = 'https://docs.microsoft.com/%s' % language
-    text_to_delete = ['<span class="visually-hidden">Completado</span>', '<span>Continuar </span>']
+    path_url = 'https://learn.microsoft.com/api/lists/studyguide/exam/exam.az-500?locale=%s' % language
+    base_url = 'https://learn.microsoft.com/%s' % language
 
     r = requests.get(path_url)
     main_modules = json.loads(r.text)
